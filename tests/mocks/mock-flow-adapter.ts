@@ -1,0 +1,197 @@
+import { BaseFlowAdapter, FlowAdapterConfig, FlowCapabilities, FlowExecutionContext } from '../../src/adapters/base-flow-adapter.js';
+import { Task, TaskResult, FlowType, FlowStatus } from '../../src/types/index.js';
+
+export interface MockFlowConfig extends FlowAdapterConfig {
+  name: string;
+  type: FlowType;
+  version: string;
+  simulateDelay?: number;
+  simulateErrors?: boolean;
+  errorRate?: number;
+  authRequired?: boolean;
+}
+
+export class MockFlowAdapter extends BaseFlowAdapter {
+  private mockConfig: MockFlowConfig;
+  private mockAuthenticated = false;
+  private taskHistory: Task[] = [];
+  private executionCount = 0;
+
+  constructor(config: MockFlowConfig) {
+    super(config);
+    this.mockConfig = config;
+  }
+
+  get name(): string {
+    return this.mockConfig.name;
+  }
+
+  get type(): FlowType {
+    return this.mockConfig.type;
+  }
+
+  get version(): string {
+    return this.mockConfig.version;
+  }
+
+  async initialize(): Promise<void> {
+    await this.simulateAsyncOperation(100);
+    this.setStatus(FlowStatus.AVAILABLE);
+  }
+
+  async shutdown(): Promise<void> {
+    await this.simulateAsyncOperation(50);
+    this.setStatus(FlowStatus.OFFLINE);
+    this.taskHistory = [];
+    this.executionCount = 0;
+  }
+
+  async executeTask(task: Task, context?: FlowExecutionContext): Promise<TaskResult> {
+    if (!this.canAcceptTask()) {
+      throw new Error(`Mock adapter cannot accept task: status=${this.status}, load=${this.currentLoad}/${this.getMaxLoad()}`);
+    }
+
+    if (this.mockConfig.authRequired && !this.mockAuthenticated) {
+      throw new Error('Authentication required but not authenticated');
+    }
+
+    this.incrementLoad();
+    this.taskHistory.push(task);
+    this.executionCount++;
+    
+    const startTime = Date.now();
+
+    try {
+      // Simulate execution delay
+      if (this.mockConfig.simulateDelay) {
+        await this.simulateAsyncOperation(this.mockConfig.simulateDelay);
+      }
+
+      // Simulate random errors
+      if (this.mockConfig.simulateErrors && this.mockConfig.errorRate) {
+        if (Math.random() < this.mockConfig.errorRate) {
+          throw new Error(`Simulated error in ${this.name} adapter`);
+        }
+      }
+
+      // Create mock result based on task type
+      const mockResult = this.createMockResult(task, context);
+      const executionTime = Date.now() - startTime;
+      
+      return this.createTaskResult(
+        true,
+        mockResult,
+        undefined,
+        executionTime,
+        { 
+          executionCount: this.executionCount,
+          adapter: this.name,
+          taskType: task.type
+        }
+      );
+
+    } catch (error: any) {
+      const executionTime = Date.now() - startTime;
+      return this.createTaskResult(
+        false,
+        undefined,
+        error.message,
+        executionTime,
+        { 
+          executionCount: this.executionCount,
+          adapter: this.name,
+          errorType: error.constructor.name
+        }
+      );
+    } finally {
+      this.decrementLoad();
+    }
+  }
+
+  async checkHealth(): Promise<boolean> {
+    await this.simulateAsyncOperation(10);
+    return this.status !== FlowStatus.ERROR;
+  }
+
+  getCapabilities(): FlowCapabilities {
+    return {
+      codeGeneration: true,
+      codeReview: true,
+      research: true,
+      analysis: true,
+      documentation: true,
+      testing: true,
+      refactoring: true,
+      orchestration: false,
+      hiveMind: false,
+      swarmCoordination: false,
+      mcp: false,
+      webAuth: this.mockConfig.authRequired || false
+    };
+  }
+
+  async authenticate(): Promise<boolean> {
+    if (!this.mockConfig.authRequired) {
+      return true;
+    }
+
+    await this.simulateAsyncOperation(500);
+    this.mockAuthenticated = true;
+    return true;
+  }
+
+  isAuthenticated(): boolean {
+    return !this.mockConfig.authRequired || this.mockAuthenticated;
+  }
+
+  getAuthUrl(): string {
+    return `https://mock-auth.example.com/login?adapter=${this.name}`;
+  }
+
+  // Mock-specific methods for testing
+  getTaskHistory(): Task[] {
+    return [...this.taskHistory];
+  }
+
+  getExecutionCount(): number {
+    return this.executionCount;
+  }
+
+  resetMock(): void {
+    this.taskHistory = [];
+    this.executionCount = 0;
+    this.mockAuthenticated = false;
+  }
+
+  setMockAuthenticated(authenticated: boolean): void {
+    this.mockAuthenticated = authenticated;
+  }
+
+  forceMockError(shouldError: boolean): void {
+    this.mockConfig.simulateErrors = shouldError;
+    this.mockConfig.errorRate = shouldError ? 1 : 0;
+  }
+
+  setMockStatus(status: FlowStatus): void {
+    this.setStatus(status);
+  }
+
+  private async simulateAsyncOperation(delay: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, delay));
+  }
+
+  private createMockResult(task: Task, context?: FlowExecutionContext): string {
+    const results = {
+      'code-generation': `// Generated code for: ${task.description}\nfunction mockGeneratedFunction() {\n  return 'Generated by ${this.name}';\n}`,
+      'code-review': `Code review completed for: ${task.description}\n\nFindings:\n- No issues found\n- Code quality: Good\n- Performance: Acceptable`,
+      'research': `Research results for: ${task.description}\n\n1. Key finding from ${this.name}\n2. Supporting evidence\n3. Recommendations`,
+      'analysis': `Analysis results for: ${task.description}\n\nSummary: Analysis completed by ${this.name}\nMetrics: All parameters within acceptable ranges`,
+      'documentation': `# Documentation\n\n## ${task.description}\n\nDocumentation generated by ${this.name} adapter.\n\n### Features\n- Feature 1\n- Feature 2`,
+      'testing': `Test results for: ${task.description}\n\nTests run: 5\nPassed: 5\nFailed: 0\n\nAll tests completed successfully.`,
+      'refactoring': `Refactoring suggestions for: ${task.description}\n\n1. Extract common functionality\n2. Improve naming conventions\n3. Add type annotations`,
+      'orchestration': `Orchestration plan for: ${task.description}\n\nSteps:\n1. Initialize components\n2. Execute workflow\n3. Cleanup resources`
+    };
+
+    return results[task.type as keyof typeof results] || `Mock result for ${task.type}: ${task.description}`;
+  }
+}

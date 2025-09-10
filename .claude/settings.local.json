@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(chmod:*)",
+      "Bash(npm install)",
+      "Bash(npx:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(npm install:*)",
+      "Bash(claude-flow hive-mind:*)",
+      "Bash(dir:*)",
+      "Bash(node:*)",
+      "Bash(npm run build:*)",
+      "WebFetch(domain:mistral.ai)",
+      "WebFetch(domain:docs.mistral.ai)",
+      "WebFetch(domain:docs.perplexity.ai)",
+      "WebFetch(domain:docs.cohere.com)",
+      "WebFetch(domain:groq.com)",
+      "WebFetch(domain:console.groq.com)",
+      "WebFetch(domain:www.together.ai)",
+      "WebFetch(domain:docs.together.ai)",
+      "WebFetch(domain:replicate.com)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm whoami:*)",
+      "Bash(npm publish:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
