@@ -50,5 +50,26 @@ logs/
 tmp/
 temp/
 
+# AI/ML model caches and data
+.claude-flow/
+.hive-mind/
+.queen-bee/
+.nexus-cache/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Package lock files (using npm)
+package-lock.json
+
+# Test artifacts
+test-results/
+
+# Backup files
+*.bak
+*.backup
+
 # Project specific
 codebases/
