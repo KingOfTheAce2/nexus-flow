@@ -1,6 +1,6 @@
 {
   "name": "@bear_ai/nexus-flow",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "Universal AI orchestrator - portal to any flow (claude-flow, qwen-flow, copilot-flow) with queen bee coordination system",
   "main": "src/index.js",
   "type": "module",
